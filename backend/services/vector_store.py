@@ -1,6 +1,9 @@
 # uuid = generates a unique ID for each chunk we store in Pinecone
 # every vector in Pinecone needs a unique string ID
+import time
 import uuid
+import asyncio
+
 
 # our settings (PINECONE_API_KEY, PINECONE_INDEX_NAME, TOP_K_RESULTS)
 from core.config import get_settings
@@ -75,7 +78,11 @@ class VectorStore:
                 ),
             )
             print(f"Created new Pinecone index: {settings.PINECONE_INDEX_NAME}")
-
+        import time
+        print("Waiting for index to be ready...")
+        while not pc.describe_index(settings.PINECONE_INDEX_NAME).status["ready"]:
+            time.sleep(1)
+        print("Index is ready.")
         # Connect to the index (whether it already existed or we just created it)
         self.index = pc.Index(settings.PINECONE_INDEX_NAME)
         print(f"Connected to Pinecone index: {settings.PINECONE_INDEX_NAME}")
@@ -129,7 +136,8 @@ class VectorStore:
 
         for i in range(0, len(vectors_to_upsert), batch_size):
             batch = vectors_to_upsert[i : i + batch_size]
-            self.index.upsert(vectors=batch)
+            await asyncio.to_thread(self.index.upsert, vectors=batch)
+
 
         return len(vectors_to_upsert)   # return how many were stored
 
@@ -168,10 +176,11 @@ class VectorStore:
 
         # Query Pinecone
         # include_metadata=True → return the text and source info alongside scores
-        response = self.index.query(
-            vector=query_vector,
-            top_k=top_k,
-            include_metadata=True,
+        response = await asyncio.to_thread(
+        self.index.query,
+        vector=query_vector,
+        top_k=top_k,
+        include_metadata=True,
         )
 
         # Format results into clean dicts
@@ -201,9 +210,7 @@ class VectorStore:
             raise RuntimeError("VectorStore not connected. Call connect() first.")
 
         # Pinecone lets us delete by metadata filter
-        self.index.delete(
-            filter={"source": {"$eq": filename}}
-        )
+        await asyncio.to_thread(self.index.delete, filter={"source": {"$eq": filename}})
         print(f"Deleted all vectors for source: {filename}")
 
     # =========================================================================
@@ -225,7 +232,8 @@ class VectorStore:
         if not self.index:
             raise RuntimeError("VectorStore not connected. Call connect() first.")
 
-        stats = self.index.describe_index_stats()
+        stats = await asyncio.to_thread(self.index.describe_index_stats)
+
 
         return {
             "total_vectors": stats.total_vector_count,

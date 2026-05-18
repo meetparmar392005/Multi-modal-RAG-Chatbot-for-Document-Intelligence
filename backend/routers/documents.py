@@ -174,33 +174,6 @@ async def search_documents(request: SearchRequest):
         query=request.query,
         results=results,
     )
-
-
-# =============================================================================
-# DELETE /documents/{filename}
-# =============================================================================
-
-@router.delete("/{filename}")
-async def delete_document(filename: str):
-    """
-    Delete all stored chunks for a specific file from Pinecone.
-    Call this before re-uploading an updated version of the same file.
-
-    Example:
-      DELETE /documents/report.pdf
-      → removes all vectors where source = "report.pdf"
-    """
-    try:
-        await vector_store.delete_by_source(filename)
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to delete document: {str(e)}"
-        )
-
-    return {"message": f"All chunks for '{filename}' deleted successfully."}
-
-
 # =============================================================================
 # GET /documents/stats
 # =============================================================================
@@ -227,3 +200,29 @@ async def get_stats():
         )
 
     return stats
+
+# =============================================================================
+# DELETE /documents/{filename}
+# =============================================================================
+
+@router.delete("/{filename}")
+async def delete_document(filename: str):
+    """
+    Delete all stored chunks for a specific file from Pinecone.
+    Call this before re-uploading an updated version of the same file.
+
+    Example:
+      DELETE /documents/report.pdf
+      → removes all vectors where source = "report.pdf"
+    """
+    try:
+        await vector_store.delete_by_source(filename)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to delete document: {str(e)}"
+        )
+
+    return {"message": f"All chunks for '{filename}' deleted successfully."}
+
+
