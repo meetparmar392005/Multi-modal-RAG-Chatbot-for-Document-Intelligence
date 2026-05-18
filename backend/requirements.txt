@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+python-multipart
+openai
+pymupdf
+pandas
+openpyxl
+tabulate
+pinecone-client
+python-dotenv
+pydantic-settings
